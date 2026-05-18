@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
-const PACKAGE_NAME = "npm:gentle-engram@0.1.5";
+const PACKAGE_NAME = "npm:gentle-engram@0.1.6";
 const MCP_ADAPTER_PACKAGE = "npm:pi-mcp-adapter";
 const HELP = `pi-engram
 
@@ -12,11 +12,14 @@ Usage:
 
 Creates Pi's Engram MCP config in the Pi agent dir and ensures pi-mcp-adapter
 is declared in settings.json. The Pi extension itself is loaded by installing
-the package with: pi install npm:gentle-engram@0.1.5
+the package with: pi install npm:gentle-engram@0.1.6
 `;
 
-const MCP_LAUNCHER =
+const OLD_MCP_LAUNCHER =
   "const { spawn } = require('node:child_process'); const bin = process.env.ENGRAM_BIN || 'engram'; const child = spawn(bin, ['mcp', '--tools=agent'], { stdio: 'inherit' }); child.on('error', () => process.exit(127)); child.on('exit', (code, signal) => { if (typeof code === 'number') process.exit(code); process.kill(process.pid, signal || 'SIGTERM'); });";
+
+const MCP_LAUNCHER =
+  "const { spawn } = require('node:child_process'); const { existsSync, readFileSync } = require('node:fs'); const { homedir } = require('node:os'); const { join } = require('node:path'); const trim = (v) => typeof v === 'string' ? v.trim() : ''; const cloudConfigPath = () => join(trim(process.env.ENGRAM_DATA_DIR) || join(homedir(), '.engram'), 'cloud.json'); const hasPersistedServer = () => { const path = cloudConfigPath(); if (!existsSync(path)) return false; try { return trim(JSON.parse(readFileSync(path, 'utf8')).server_url).length > 0; } catch { return false; } }; const env = { ...process.env }; if (!trim(env.ENGRAM_CLOUD_AUTOSYNC) && trim(env.ENGRAM_CLOUD_TOKEN) && (trim(env.ENGRAM_CLOUD_SERVER) || hasPersistedServer())) env.ENGRAM_CLOUD_AUTOSYNC = '1'; const bin = env.ENGRAM_BIN || 'engram'; const child = spawn(bin, ['mcp', '--tools=agent'], { stdio: 'inherit', env }); child.on('error', () => process.exit(127)); child.on('exit', (code, signal) => { if (typeof code === 'number') process.exit(code); process.kill(process.pid, signal || 'SIGTERM'); });";
 
 function getAgentDir() {
   return process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
@@ -56,14 +59,26 @@ function createEngramServerConfig() {
   };
 }
 
+function isGeneratedEngramServerConfig(server) {
+  return server && typeof server === "object" && !Array.isArray(server)
+    && server.command === "node"
+    && Array.isArray(server.args)
+    && server.args.length === 2
+    && server.args[0] === "-e"
+    && server.args[1] === OLD_MCP_LAUNCHER
+    && server.lifecycle === "lazy"
+    && server.directTools === false;
+}
+
 function ensureMcpConfig(mcpPath, force) {
   const config = readJsonObject(mcpPath);
   const existingServers = config.mcpServers && typeof config.mcpServers === "object" && !Array.isArray(config.mcpServers)
     ? config.mcpServers
     : {};
 
-  if (existingServers.engram && !force) {
-    return false;
+  const existingEngram = existingServers.engram;
+  if (existingEngram && !force && !isGeneratedEngramServerConfig(existingEngram)) {
+    return "kept";
   }
 
   config.mcpServers = {
@@ -71,7 +86,8 @@ function ensureMcpConfig(mcpPath, force) {
     engram: createEngramServerConfig(),
   };
   writeJsonObject(mcpPath, config);
-  return true;
+  if (existingEngram && !force) return "migrated";
+  return "wrote";
 }
 
 function init() {
@@ -87,7 +103,8 @@ function init() {
   console.log(`Pi agent dir: ${agentDir}`);
   console.log(`${adapterChanged ? "Added" : "Kept"} ${MCP_ADAPTER_PACKAGE} in settings.json`);
   console.log(`${packageChanged ? "Added" : "Kept"} ${PACKAGE_NAME} in settings.json`);
-  console.log(`${mcpChanged ? "Wrote" : "Kept existing"} Engram MCP server in mcp.json`);
+  const mcpLabel = mcpChanged === "migrated" ? "Migrated" : mcpChanged === "wrote" ? "Wrote" : "Kept existing";
+  console.log(`${mcpLabel} Engram MCP server in mcp.json`);
   console.log("Set ENGRAM_URL for an existing engram serve instance, or ENGRAM_BIN for a custom engram binary path.");
 }
 

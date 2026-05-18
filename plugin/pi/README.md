@@ -78,7 +78,7 @@ Engram includes a terminal UI for browsing sessions, observations, prompts, proj
 ## Quick start
 
 ```bash
-pi install npm:gentle-engram@0.1.5
+pi install npm:gentle-engram@0.1.6
 pi install npm:pi-mcp-adapter
 pi-engram init
 ```
@@ -155,6 +155,16 @@ Engram can grow with your workflow:
 
 Cloud is opt-in and project-scoped. Local SQLite remains the source of truth; cloud replicates and makes memory visible when you explicitly enroll a project.
 
+### Pi Cloud autosync parity
+
+`gentle-engram` does not implement its own sync loop. The 30-second push/pull tick is owned by Engram core's autosync manager. For Pi-launched/configured Engram processes, the package now auto-enables that core manager when Cloud is clearly configured:
+
+- `ENGRAM_CLOUD_TOKEN` is set, and
+- either `ENGRAM_CLOUD_SERVER` is set or `cloud.json` contains `server_url`, and
+- `ENGRAM_CLOUD_AUTOSYNC` was not explicitly set.
+
+Explicit `ENGRAM_CLOUD_AUTOSYNC` values still win. Project enrollment and Cloud-side pause controls remain enforced by Engram core/server policy.
+
 ## Requirements
 
 - Pi coding agent with npm package support.
@@ -189,7 +199,7 @@ If the binary is missing, Pi keeps running and memory degrades instead of crashi
 
 `pi-engram init` writes Pi-owned config in the Pi agent directory:
 
-- `settings.json`: ensures `npm:pi-mcp-adapter` and `npm:gentle-engram@0.1.5` are declared.
+- `settings.json`: ensures `npm:pi-mcp-adapter` and `npm:gentle-engram@0.1.6` are declared.
 - `mcp.json`: adds an `engram` MCP server that launches `engram mcp --tools=agent` through a safe Node wrapper with `directTools: false`, so MCP remains available through the gateway without duplicating Pi-native `mem_*` tools.
 
 Existing `mcpServers.engram` entries are preserved unless you pass `--force`:

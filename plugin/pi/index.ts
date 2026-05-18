@@ -15,6 +15,7 @@ import { Type } from "typebox";
 import { buildRecoveryNotice, extractCompactedSummary } from "./compaction-recovery.js";
 import { compactResultStatus, humanToolName, renderCallText, renderResultText } from "./memory-tool-chrome.js";
 import { redactPrivateTags, redactUrlPath, redactValue } from "./private-redaction.js";
+import { cloudAutosyncProcessEnv } from "./cloud-autosync-env.js";
 
 const ENGRAM_PORT = Number.parseInt(process.env.ENGRAM_PORT ?? "7437", 10);
 const CONFIGURED_ENGRAM_URL = process.env.ENGRAM_URL?.trim() || undefined;
@@ -232,6 +233,7 @@ function spawnDetached(command: string, args: readonly string[], cwd?: string): 
         cwd,
         detached: true,
         stdio: "ignore",
+        env: cloudAutosyncProcessEnv(),
       });
     } catch {
       resolve(false);

@@ -35,12 +35,12 @@ Install Engram's Pi package, the MCP adapter, and Pi MCP config:
 engram setup pi
 ```
 
-`engram setup pi` runs `pi install npm:gentle-engram@0.1.5` and `pi install npm:pi-mcp-adapter`, then ensures Pi settings contain both packages and writes `mcpServers.engram` in the Pi agent MCP config when no Engram server is already configured. Existing `mcpServers.engram` entries are preserved.
+`engram setup pi` runs `pi install npm:gentle-engram@0.1.6` and `pi install npm:pi-mcp-adapter`, then ensures Pi settings contain both packages and writes `mcpServers.engram` in the Pi agent MCP config when no Engram server is already configured. Existing custom `mcpServers.engram` entries are preserved; the known generated older launcher is migrated safely.
 
 Manual equivalent:
 
 ```bash
-pi install npm:gentle-engram@0.1.5
+pi install npm:gentle-engram@0.1.6
 pi install npm:pi-mcp-adapter
 pi-engram init
 ```
@@ -680,6 +680,12 @@ engram mcp
 
 The process logs `[autosync] started (server=...)` on success. Missing token or server URL logs `[autosync] ERROR: ...` and the process starts normally without autosync.
 For `engram mcp`, autosync runs for the lifetime of the stdio MCP process and is stopped when that process exits.
+
+### Pi `gentle-engram` parity
+
+When Pi starts Engram through `gentle-engram`, the package keeps the sync loop in Engram core but can auto-enable it for Pi-managed child processes. If `ENGRAM_CLOUD_AUTOSYNC` is unset, `ENGRAM_CLOUD_TOKEN` is set, and a Cloud server is configured through `ENGRAM_CLOUD_SERVER` or `${ENGRAM_DATA_DIR:-~/.engram}/cloud.json`, Pi-launched `engram serve` and the `pi-engram init` MCP launcher pass `ENGRAM_CLOUD_AUTOSYNC=1` to the child process.
+
+Set `ENGRAM_CLOUD_AUTOSYNC=0` or another explicit value to opt out for that Pi environment. Project enrollment and Cloud pause controls still decide what can actually sync.
 
 ---
 
