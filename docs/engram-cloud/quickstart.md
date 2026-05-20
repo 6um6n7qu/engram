@@ -81,6 +81,7 @@ Required runtime env vars:
 - `ENGRAM_JWT_SECRET`
 - `ENGRAM_CLOUD_ALLOWED_PROJECTS`
 - `ENGRAM_CLOUD_HOST=0.0.0.0`
+- `ENGRAM_CLOUD_MAX_PUSH_BYTES` (optional; defaults to `8388608`)
 - `ENGRAM_PORT=18080`
 
 Dokploy guidance:
@@ -116,6 +117,7 @@ ENGRAM_CLOUD_ADMIN=replace-with-separate-admin-token
 ENGRAM_JWT_SECRET=replace-with-32+-byte-random-secret
 ENGRAM_CLOUD_ALLOWED_PROJECTS=engram,gentle-ai
 ENGRAM_CLOUD_HOST=0.0.0.0
+ENGRAM_CLOUD_MAX_PUSH_BYTES=8388608
 ENGRAM_PORT=18080
 ```
 
@@ -125,6 +127,7 @@ Notes:
 - `ENGRAM_CLOUD_ADMIN` is the dashboard admin token. Use a different secret from `ENGRAM_CLOUD_TOKEN`.
 - `ENGRAM_JWT_SECRET` must be an explicit, non-default strong secret in authenticated mode.
 - `ENGRAM_CLOUD_ALLOWED_PROJECTS` is required server-side and should be a comma-separated allowlist.
+- `ENGRAM_CLOUD_MAX_PUSH_BYTES` optionally raises or lowers the server-side limit for chunk and mutation push request bodies. Omit it to keep the default 8 MiB limit.
 
 Reference compose:
 
