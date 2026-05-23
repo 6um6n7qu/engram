@@ -76,4 +76,8 @@ func TestWriter_WriteAndRead_RoundTrip(t *testing.T) {
 	if got[0]["content"] != want[0].Content {
 		t.Errorf("content mismatch: got %q, want %q", got[0]["content"], want[0].Content)
 	}
+	// Also verify tags survive the round trip
+	if got[0]["tags"] == nil {
+		t.Errorf("expected tags to be present after round trip, got nil")
+	}
 }
