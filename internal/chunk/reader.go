@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -53,6 +54,7 @@ func (r *Reader) ReadChunk(chunkID string) ([]map[string]interface{}, error) {
 }
 
 // ListChunks returns the IDs of all chunk files found in the directory.
+// Results are sorted alphabetically for consistent ordering.
 func (r *Reader) ListChunks() ([]string, error) {
 	entries, err := os.ReadDir(r.dir)
 	if err != nil {
@@ -69,5 +71,6 @@ func (r *Reader) ListChunks() ([]string, error) {
 			ids = append(ids, strings.TrimSuffix(name, ".jsonl.gz"))
 		}
 	}
+	sort.Strings(ids)
 	return ids, nil
 }
