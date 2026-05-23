@@ -1,4 +1,4 @@
-package chunk_test
+package chunk
 
 import (
 	"compress/gzip"
@@ -6,72 +6,75 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/Gentleman-Programming/engram/internal/chunk"
+	"time"
 )
 
-func writeChunk(t *testing.T, dir, id string, entries []chunk.Entry) {
+func writeChunk(t *testing.T, dir, chunkID string, entries []map[string]interface{}) {
 	t.Helper()
-	path := filepath.Join(dir, id+".jsonl.gz")
+	path := filepath.Join(dir, chunkID+".jsonl.gz")
 	f, err := os.Create(path)
 	if err != nil {
-		t.Fatalf("create chunk: %v", err)
+		t.Fatalf("writeChunk create: %v", err)
 	}
 	defer f.Close()
 	gw := gzip.NewWriter(f)
+	defer gw.Close()
 	enc := json.NewEncoder(gw)
 	for _, e := range entries {
 		if err := enc.Encode(e); err != nil {
-			t.Fatalf("encode entry: %v", err)
+			t.Fatalf("writeChunk encode: %v", err)
 		}
-	}
-	if err := gw.Close(); err != nil {
-		t.Fatalf("gzip close: %v", err)
 	}
 }
 
 func TestReadChunk(t *testing.T) {
-	dir := t.TempDir()
-	want := []chunk.Entry{
-		{ID: "abc", Content: "hello world", Timestamp: 1700000000},
-		{ID: "def", Content: "engram rocks", Metadata: map[string]string{"lang": "go"}, Timestamp: 1700000001},
+	tmp := t.TempDir()
+	want := []map[string]interface{}{
+		{"id": "1", "content": "alpha", "timestamp": time.Now().UTC().Format(time.RFC3339)},
+		{"id": "2", "content": "beta"},
 	}
-	writeChunk(t, dir, "testchunk", want)
+	writeChunk(t, tmp, "abc123", want)
 
-	r := chunk.NewReader(dir)
-	got, err := r.ReadChunk("testchunk")
+	r := NewReader(tmp)
+	got, err := r.ReadChunk("abc123")
 	if err != nil {
 		t.Fatalf("ReadChunk: %v", err)
 	}
 	if len(got) != len(want) {
-		t.Fatalf("expected %d entries, got %d", len(want), len(got))
+		t.Fatalf("got %d entries, want %d", len(got), len(want))
 	}
-	for i, e := range got {
-		if e.ID != want[i].ID || e.Content != want[i].Content {
-			t.Errorf("entry %d mismatch: got %+v, want %+v", i, e, want[i])
+	for i, g := range got {
+		if g["id"] != want[i]["id"] {
+			t.Errorf("entry %d id: got %q, want %q", i, g["id"], want[i]["id"])
+		}
+		if g["content"] != want[i]["content"] {
+			t.Errorf("entry %d content: got %q, want %q", i, g["content"], want[i]["content"])
 		}
 	}
 }
 
 func TestListChunks(t *testing.T) {
-	dir := t.TempDir()
-	ids := []string{"aaa111", "bbb222", "ccc333"}
-	for _, id := range ids {
-		writeChunk(t, dir, id, nil)
+	tmp := t.TempDir()
+	for _, id := range []string{"chunk1", "chunk2", "chunk3"} {
+		writeChunk(t, tmp, id, nil)
+	}
+	// Add a non-chunk file that should be ignored.
+	if err := os.WriteFile(filepath.Join(tmp, "ignore.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
 	}
 
-	r := chunk.NewReader(dir)
-	got, err := r.ListChunks()
+	r := NewReader(tmp)
+	ids, err := r.ListChunks()
 	if err != nil {
 		t.Fatalf("ListChunks: %v", err)
 	}
-	if len(got) != len(ids) {
-		t.Fatalf("expected %d chunks, got %d", len(ids), len(got))
+	if len(ids) != 3 {
+		t.Fatalf("got %d chunk ids, want 3: %v", len(ids), ids)
 	}
 }
 
 func TestReadChunk_MissingFile(t *testing.T) {
-	r := chunk.NewReader(t.TempDir())
+	r := NewReader(t.TempDir())
 	_, err := r.ReadChunk("nonexistent")
 	if err == nil {
 		t.Fatal("expected error for missing chunk, got nil")
