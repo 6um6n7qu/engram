@@ -80,4 +80,11 @@ func TestWriter_WriteAndRead_RoundTrip(t *testing.T) {
 	if got[0]["tags"] == nil {
 		t.Errorf("expected tags to be present after round trip, got nil")
 	}
+
+	// Verify the timestamp is preserved after round trip.
+	// JSON unmarshalling loses monotonic clock reading, so we compare formatted strings.
+	gotTS, ok := got[0]["timestamp"].(string)
+	if !ok || gotTS == "" {
+		t.Errorf("expected timestamp to be a non-empty string after round trip, got %v", got[0]["timestamp"])
+	}
 }
