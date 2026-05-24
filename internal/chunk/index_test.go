@@ -75,3 +75,14 @@ func TestIndex_Remove(t *testing.T) {
 		t.Error("index file should not be empty after remove")
 	}
 }
+
+// TestIndex_GetMissing checks that Get returns false for an ID that was never added.
+// Noticed this case wasn't explicitly covered — good to have for clarity.
+func TestIndex_GetMissing(t *testing.T) {
+	dir := t.TempDir()
+	idx, _ := NewIndex(dir)
+
+	if _, ok := idx.Get("nonexistent"); ok {
+		t.Error("expected Get to return false for missing entry")
+	}
+}
